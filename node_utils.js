@@ -64,12 +64,20 @@ function get_redis_subscriber(kind = "redis_queue", options = {}) {
 	// is solved for a more elegant implementation
 	if (connStr && connStr.startsWith("unix://")) {
 		client = redis.createClient({
-			socket: { path: connStr.replace("unix://", "") },
+			socket: { path: connStr.replace("unix://", ""), keepAlive: 60000 },
+			pingInterval: 60000,
 			...options,
 		});
 	} else {
-		client = redis.createClient({ url: connStr, ...options });
+		client = redis.createClient({
+			url: connStr,
+			socket: { keepAlive: 60000 },
+			pingInterval: 60000,
+			...options,
+		});
 	}
+	// without an error handler, an "error" event on a dropped socket crashes the process
+	client.on("error", (err) => console.warn("redis subscriber error", err.message));
 	return client;
 }
 
