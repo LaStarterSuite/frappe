@@ -3,6 +3,7 @@
 
 import gzip
 import importlib
+import io
 import json
 import os
 import secrets
@@ -14,7 +15,7 @@ import sys
 import time
 import types
 import unittest
-from contextlib import contextmanager
+from contextlib import contextmanager, redirect_stdout
 from functools import wraps
 from glob import glob
 from unittest.case import skipIf
@@ -569,6 +570,12 @@ class TestCommands(BaseTestCommands):
 		self.assertTrue("sites/test2.txt" in get_bench_relative_path("test2.txt"))
 		with self.assertRaises(SystemExit):
 			get_bench_relative_path("test3.txt")
+
+		invalid_abs_path = os.path.join(bench_path, "test4.txt")
+		stdout = io.StringIO()
+		with redirect_stdout(stdout), self.assertRaises(SystemExit):
+			get_bench_relative_path(invalid_abs_path)
+		self.assertEqual(stdout.getvalue().strip(), f"Invalid path {invalid_abs_path}")
 
 		os.remove(test1_path)
 		os.remove(test2_path)
