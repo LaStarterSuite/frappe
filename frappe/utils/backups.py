@@ -5,6 +5,7 @@ import contextlib
 # imports - standard imports
 import gzip
 import os
+import shlex
 import sqlite3
 import sys
 import tempfile
@@ -286,8 +287,8 @@ class BackupGenerator:
 				cmd_string = "gpg --yes --passphrase {passphrase} --pinentry-mode loopback -c {filelocation}"
 				try:
 					command = cmd_string.format(
-						passphrase=get_or_generate_backup_encryption_key(),
-						filelocation=path,
+						passphrase=shlex.quote(get_or_generate_backup_encryption_key()),
+						filelocation=shlex.quote(path),
 					)
 
 					frappe.utils.execute_in_shell(command)
@@ -403,7 +404,7 @@ class BackupGenerator:
 
 			try:
 				frappe.utils.execute_in_shell(
-					cmd_string.format(backup_path, files_path),
+					cmd_string.format(shlex.quote(backup_path), shlex.quote(files_path)),
 					verbose=self.verbose,
 					low_priority=True,
 					check_exit_code=True,
@@ -507,10 +508,12 @@ class BackupGenerator:
 				_("{} not found in PATH! This is required to take a backup.").format(bin_name),
 				exc=frappe.ExecutableNotFound,
 			)
-		cmd.append(bin)
+		cmd.append(shlex.quote(bin))
 		cmd.append(shlex.join(args))
 
-		command = " ".join(["set -o pipefail;", *cmd, "|", gzip_exc, ">>", self.backup_path_db])
+		command = " ".join(
+			["set -o pipefail;", *cmd, "|", shlex.quote(gzip_exc), ">>", shlex.quote(self.backup_path_db)]
+		)
 		if self.verbose:
 			print(command.replace(shlex.quote(self.password), "*" * 10) + "\n")
 
@@ -823,9 +826,9 @@ def decrypt_backup(file_path: str, passphrase: str):
 
 		cmd_string = "gpg --yes --passphrase {passphrase} --pinentry-mode loopback -o {decrypted_file} -d {file_location}"
 		command = cmd_string.format(
-			passphrase=passphrase,
-			file_location=file_path_with_ext,
-			decrypted_file=file_path,
+			passphrase=shlex.quote(passphrase),
+			file_location=shlex.quote(file_path_with_ext),
+			decrypted_file=shlex.quote(file_path),
 		)
 	frappe.utils.execute_in_shell(command)
 	try:
