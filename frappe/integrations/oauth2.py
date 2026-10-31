@@ -173,6 +173,7 @@ def authorize(**kwargs):
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=5, seconds=10 * 60)
 def get_token(*args, **kwargs):
 	try:
 		r = frappe.request
@@ -194,6 +195,7 @@ def get_token(*args, **kwargs):
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
+@rate_limit(limit=5, seconds=10 * 60)
 def revoke_token(*args, **kwargs):
 	try:
 		r = frappe.request
