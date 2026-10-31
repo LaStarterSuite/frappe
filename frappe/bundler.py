@@ -396,7 +396,7 @@ def link_assets_dir(source, target, hard_link=False):
 
 	if os.path.exists(target):
 		if os.path.islink(target):
-			os.unlink(target)
+			return
 		else:
 			shutil.rmtree(target)
 
