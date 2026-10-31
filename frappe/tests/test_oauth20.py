@@ -594,6 +594,31 @@ class TestOAuth20(FrappeRequestTestCase):
 			"Active",
 		)
 
+	def test_expired_authorization_code_is_rejected(self):
+		update_client_for_auth_code_grant(self.client_id)
+		code = self.get_authorization_code()
+		expiration_time = frappe.db.get_value("OAuth Authorization Code", code, "expiration_time")
+		self.assertIsNotNone(expiration_time)
+		self.assertGreater(expiration_time, frappe.utils.now_datetime())
+
+		frappe.db.set_value("OAuth Authorization Code", code, "expiration_time", "2000-01-01 00:00:00")
+		# The HTTP request runs in another thread and only sees committed fixtures.
+		frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
+
+		response = self.post(
+			"/api/method/frappe.integrations.oauth2.get_token",
+			headers=self.get_client_auth_headers(),
+			data={
+				"grant_type": "authorization_code",
+				"code": code,
+				"redirect_uri": self.redirect_uri,
+				"client_id": self.client_id,
+			},
+		)
+
+		self.assertEqual(response.status_code, 400)
+		self.assertEqual(response.json.get("error"), "invalid_grant")
+
 	def test_public_client_requires_pkce(self):
 		update_client_for_auth_code_grant(self.client_id, public=True)
 

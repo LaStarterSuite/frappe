@@ -12,7 +12,7 @@ from oauthlib.openid import RequestValidator
 import frappe
 from frappe.integrations.doctype.oauth_bearer_token.oauth_bearer_token import get_oauth_token_hash
 from frappe.integrations.doctype.oauth_client.oauth_client import OAuthClient
-from frappe.utils.data import cstr, get_system_timezone, get_url, now_datetime
+from frappe.utils.data import add_to_date, cstr, get_system_timezone, get_url, now_datetime
 
 
 class OAuthWebRequestValidator(RequestValidator):
@@ -87,6 +87,7 @@ class OAuthWebRequestValidator(RequestValidator):
 		oac.client = client_id
 		oac.user = frappe.session.user
 		oac.authorization_code = code["code"]
+		oac.expiration_time = add_to_date(now_datetime(), minutes=10, as_datetime=True)
 
 		if request.nonce:
 			oac.nonce = request.nonce
@@ -196,11 +197,16 @@ class OAuthWebRequestValidator(RequestValidator):
 		code_details = frappe.db.get_value(
 			"OAuth Authorization Code",
 			{"name": code, "client": client_id, "validity": "Valid"},
-			("scopes", "user"),
+			("scopes", "user", "expiration_time"),
 			as_dict=True,
 		)
 
 		if not code_details:
+			return False
+
+		# RFC 6749 section 4.1.2: codes must be short-lived. Codes saved before
+		# expiration was enforced carry no expiration_time and stay redeemable.
+		if code_details.expiration_time and code_details.expiration_time < now_datetime():
 			return False
 
 		request.scopes = code_details.scopes.split(get_url_delimiter())
