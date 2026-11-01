@@ -209,10 +209,14 @@ async function update_assets_obj(app, assets, assets_rtl) {
 
 		// eg: "js/marketplace.bundle.6SCSPSGQ.js"
 		const value = path.join(prefix, file);
+		// "<app>/<bundle>" stays unique across the bench even when two apps pick
+		// the same bundle filename; the bare key is kept for compatibility.
 		if (file.includes("-rtl")) {
 			assets_rtl[`rtl_${key}`] = value;
+			assets_rtl[`rtl_${app}/${key}`] = value;
 		} else {
 			assets[key] = value;
+			assets[`${app}/${key}`] = value;
 		}
 	}
 }
@@ -512,14 +516,20 @@ async function write_assets_json(metafile) {
 		let info = metafile.outputs[output];
 		let asset_path = "/" + path.relative(sites_path, output);
 		if (info.entryPoint) {
+			let app = path.relative(apps_path, info.entryPoint).split(path.sep)[0];
 			let key = path.basename(info.entryPoint);
 			// Style bundles are keyed by their compiled extension: the
 			// desk.bundle.scss entry point is "desk.bundle.css" in assets.json.
 			if (asset_path.endsWith(".css")) {
 				key = key.replace(/\.(scss|sass|less|styl|css)$/, ".css");
 			}
+			// "<app>/<bundle>" stays unique across the bench even when two apps
+			// pick the same bundle filename; hooks can reference it explicitly.
+			// The bare key is kept for backward compatibility.
+			let namespaced_key = `${app}/${key}`;
 			if (key.endsWith(".css") && asset_path.includes("/css-rtl/")) {
 				rtl = true;
+				namespaced_key = `rtl_${namespaced_key}`;
 				key = `rtl_${key}`;
 			} else if (out[key]) {
 				log_warn(
@@ -528,6 +538,7 @@ async function write_assets_json(metafile) {
 				);
 			}
 			out[key] = asset_path;
+			out[namespaced_key] = asset_path;
 		}
 	}
 
