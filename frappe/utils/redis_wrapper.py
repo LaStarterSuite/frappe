@@ -600,9 +600,9 @@ class ClientCache:
 
 		return val
 
-	def set_value(self, key, val, *, shared=False):
+	def set_value(self, key, val, *, shared=False, expires_in_sec=None):
 		key = self.redis.make_key(key, shared=shared)
-		size = self.redis.set_value(key, val, shared=True)
+		size = self.redis.set_value(key, val, expires_in_sec=expires_in_sec, shared=True)
 		if not self.healthy:
 			return
 		self.ensure_max_size()
