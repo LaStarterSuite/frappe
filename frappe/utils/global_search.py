@@ -106,7 +106,14 @@ def rebuild_for_doctype(doctype):
 	fieldnames = get_selected_fields(meta, parent_search_fields)
 
 	# Get all records from parent doctype table
-	all_records = frappe.get_all(doctype, fields=fieldnames, filters=_get_filters())
+	if meta.is_virtual:
+		# A virtual controller keeps its default page when handed Frappe's
+		# "no limit" 0 (see DatabaseQuery._handle_virtual_doctype), which would
+		# index only the first 20 rows. Give it an explicit limit so every
+		# record gets indexed.
+		all_records = frappe.get_all(doctype, fields=fieldnames, filters=_get_filters(), limit=999999)
+	else:
+		all_records = frappe.get_all(doctype, fields=fieldnames, filters=_get_filters())
 
 	# Children data
 	all_children, child_search_fields = get_children_data(doctype, meta)
