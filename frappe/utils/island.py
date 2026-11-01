@@ -54,6 +54,9 @@ def get_ui_islands() -> list[str]:
 
 def island_name(asset_key: str) -> str | None:
 	"""The island an asset key registers, or `None` for any other key."""
+	if "/" in asset_key:
+		# app-namespaced duplicate of a legacy key, not an island of its own
+		return None
 	if asset_key.endswith(ISLAND_JS_SUFFIX):
 		return asset_key.removesuffix(ISLAND_JS_SUFFIX)
 
