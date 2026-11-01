@@ -1060,7 +1060,12 @@ def get_hooks(
 		hooks = client_cache.get_value("app_hooks")
 		if hooks is None:
 			hooks = _load_app_hooks()
-			client_cache.set_value("app_hooks", hooks)
+			# Whichever process misses the shared key first repopulates it from
+			# its own imports -- a process that started before a deploy can
+			# publish hooks that no longer exist. Expire the key so such a
+			# stale write can't outlive it: after expiry an up-to-date process
+			# rebuilds it from the current code.
+			client_cache.set_value("app_hooks", hooks, expires_in_sec=600)
 
 	if hook:
 		return hooks.get(hook, ([] if default == "_KEEP_DEFAULT_LIST" else default))
