@@ -314,7 +314,11 @@ def introspect_token(token: str, token_type_hint: str | None = None):
 			{
 				"client_id": client.client_id,
 				"trusted_client": client.skip_authorization,
-				"active": bearer_token.status == "Active",
+				"active": bearer_token.status == "Active"
+				and (
+					not bearer_token.expiration_time
+					or bearer_token.expiration_time > frappe.utils.now_datetime()
+				),
 				"exp": round(bearer_token.expiration_time.timestamp()),
 				"scope": bearer_token.scopes,
 			}
