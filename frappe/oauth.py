@@ -216,9 +216,18 @@ class OAuthWebRequestValidator(RequestValidator):
 
 		if redirect_uris:
 			redirect_uris = redirect_uris.split(get_url_delimiter())
-			return redirect_uri in redirect_uris
+			if redirect_uri not in redirect_uris:
+				return False
+		elif saved_redirect_uri != redirect_uri:
+			return False
 
-		return saved_redirect_uri == redirect_uri
+		# RFC 6749 section 4.1.3: the redirect_uri presented at the token endpoint must be
+		# identical to the one bound to the authorization code when the code was issued.
+		bound_redirect_uri = frappe.db.get_value(
+			"OAuth Authorization Code", code, "redirect_uri_bound_to_authorization_code"
+		)
+
+		return bound_redirect_uri == redirect_uri
 
 	def validate_grant_type(self, client_id, grant_type, client, request, *args, **kwargs):
 		# Clients should only be allowed to use one type of grant.

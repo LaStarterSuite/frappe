@@ -12,7 +12,7 @@ from werkzeug.test import TestResponse
 import frappe
 from frappe.integrations.doctype.oauth_bearer_token.oauth_bearer_token import get_oauth_token_hash
 from frappe.integrations.oauth2 import encode_params, get_openid_configuration, get_resource_url
-from frappe.oauth import OAuthWebRequestValidator
+from frappe.oauth import OAuthWebRequestValidator, get_url_delimiter
 from frappe.tests import IntegrationTestCase
 from frappe.tests.test_api import get_test_client, make_request, suppress_stdout
 from frappe.tests.utils import make_test_records
@@ -593,6 +593,20 @@ class TestOAuth20(FrappeRequestTestCase):
 			),
 			"Active",
 		)
+
+	def test_token_exchange_rejects_redirect_uri_not_bound_to_code(self):
+		update_client_for_auth_code_grant(self.client_id)
+		other_redirect_uri = "http://localhost:9000"
+		self.oauth_client.db_set(
+			"redirect_uris", get_url_delimiter().join([self.redirect_uri, other_redirect_uri])
+		)
+		# The HTTP request runs in another thread and only sees committed fixtures.
+		frappe.db.commit()  # nosemgrep: frappe-semgrep-rules.rules.frappe-manual-commit
+
+		bearer_token = self.get_bearer_token(redirect_uri=other_redirect_uri)
+
+		self.assertIsNone(bearer_token.get("access_token"))
+		self.assertEqual(bearer_token.get("error"), "invalid_grant")
 
 	def test_public_client_requires_pkce(self):
 		update_client_for_auth_code_grant(self.client_id, public=True)
