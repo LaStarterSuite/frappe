@@ -809,6 +809,18 @@ def get_or_generate_backup_encryption_key():
 	return key
 
 
+def is_gpg_encrypted(file_path: str) -> bool:
+	"""Check whether a file is a GPG encrypted message."""
+	with open(file_path, "rb") as f:
+		header = f.read(32)
+	if header.startswith(b"-----BEGIN PGP MESSAGE-----"):
+		return True
+
+	# binary OpenPGP messages start with a (Public- or Symmetric-)Key Encrypted
+	# Session Key packet: old format 10TTTTLL, new format 11TTTTTT, tags 1 or 3
+	return bool(header) and header[0] in (0x84, 0x85, 0x86, 0x87, 0x8C, 0x8D, 0x8E, 0x8F, 0xC1, 0xC3)
+
+
 @contextlib.contextmanager
 def decrypt_backup(file_path: str, passphrase: str):
 	if which("gpg") is None:
@@ -818,6 +830,10 @@ def decrypt_backup(file_path: str, passphrase: str):
 		print("Invalid path: ", file_path)
 		return
 	else:
+		if not is_gpg_encrypted(file_path):
+			yield
+			return
+
 		file_path_with_ext = file_path + ".gpg"
 		os.rename(file_path, file_path_with_ext)
 

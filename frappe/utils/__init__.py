@@ -1023,13 +1023,13 @@ def get_bench_relative_path(file_path):
 	else:
 		base_path = "."
 
-	file_path = os.path.join(base_path, file_path)
+	joined_path = os.path.join(base_path, file_path)
 
-	if not os.path.exists(file_path):
-		print(f"Invalid path {file_path[3:]}")
+	if not os.path.exists(joined_path):
+		print(f"Invalid path {file_path}")
 		sys.exit(1)
 
-	return os.path.abspath(file_path)
+	return os.path.abspath(joined_path)
 
 
 def groupby_metric(iterable: dict[str, list], key: str):
