@@ -384,7 +384,7 @@ class File(Document):
 		self.validate_empty_folder()
 		self.validate_protected_file()
 		self.validate_not_referenced_in_attach_field()
-		self._delete_file_on_disk()
+		frappe.db.after_commit.add(self._delete_file_on_disk)
 		if not self.is_folder:
 			fieldname = escape_html(self.attached_to_field or "")
 			file_name = escape_html(self.file_name)
@@ -421,8 +421,7 @@ class File(Document):
 					self.attached_to_field,
 					self.file_url,
 				)
-			return
-		if parent_meta.has_field(self.attached_to_field) and frappe.db.exists(
+		elif parent_meta.has_field(self.attached_to_field) and frappe.db.exists(
 			self.attached_to_doctype,
 			{"name": self.attached_to_name, self.attached_to_field: old_file_url},
 		):
