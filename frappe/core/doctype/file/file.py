@@ -647,7 +647,7 @@ class File(Document):
 		if not ref_doc.meta.protect_attached_files:
 			return
 
-		if ref_doc.docstatus == 2 and ref_doc.has_permission("delete"):
+		if ref_doc.docstatus == 2 and frappe.has_permission(self.attached_to_doctype, "delete", doc=ref_doc):
 			# Deletion must still be possible if users have the permission to delete the linked document
 			return
 
@@ -1096,9 +1096,9 @@ def has_permission(doc, ptype=None, user=None, debug=False):
 			return False
 
 		if ptype in ["write", "create", "delete"]:
-			return ref_doc.has_permission("write", debug=debug, user=user)
+			return frappe.has_permission(attached_to_doctype, "write", doc=ref_doc, user=user, debug=debug)
 		else:
-			return ref_doc.has_permission("read", debug=debug, user=user)
+			return frappe.has_permission(attached_to_doctype, "read", doc=ref_doc, user=user, debug=debug)
 
 	return False
 
